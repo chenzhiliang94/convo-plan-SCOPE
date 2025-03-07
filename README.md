@@ -19,7 +19,7 @@ SCOPE consists of two phase. The learning phase has already been done and we hav
 
 ![SCOPE overview image](https://github.com/user-attachments/assets/a37909ce-7b30-4321-bbc0-2e24eba6c129)
 
-# SETUP
+# SETUP (DO THIS BEFORE ANYTHING ELSE)
 0. From the repo home, run `mkdir transition_models/deterministic` to create an empty folder.
 1. Download the files from https://drive.google.com/drive/folders/1NLK8f8aV476frtIuMwC8IgwTVPxbOB6S and move them into `transition_models/deterministic/`. There should be four folders (seed_0_batch_2048, seed_1_batch_2048, seed_2_batch_2048, seed_3_batch_2048) added.
 2. `pip3 install -r requirements.txt`
