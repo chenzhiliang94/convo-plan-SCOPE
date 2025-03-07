@@ -27,7 +27,7 @@ SCOPE consists of two phase. The learning phase has already been done and we hav
 # Given a conversation starter, get the best LLM response.
 A simple use case is that given a conversation starter, we want to use SCOPE to simply
 0. Go to `evaluation/conversation_starter.txt`, you should place one question that you want to ask the LLM with here. (Currently, we do not support multiple questions for this section, but later sections do).
-1. Run `python3 -u evaluation/run_evaluation_singular.py --reward_func=length_human --cuda_for_llm_reward=0 --cuda_for_llm_reward=1 --lr=0.0001 --evaluation_depth=4 --mcts_time=5 --agent=pure_online --result_file=camera --trials=1 --evaluation_data=conversation_starter.txt 2>&1 | tee output.out` The reward function and parameters can be adjusted. We provide more details what they mean later.
+1. Run `python3 -u evaluation/run_evaluation_singular.py --reward_func=length_human --cuda_for_llm_reward=0 --cuda_for_q_embedding_transition=1 --lr=0.0001 --evaluation_depth=4 --mcts_time=5 --agent=pure_online --result_file=camera --trials=1 --evaluation_data=conversation_starter.txt 2>&1 | tee output.out` The reward function and parameters can be adjusted. We provide more details what they mean later.
 2. You should see the following output. We see the LLM response options (we can adjust the number of proposed responses, see later sections), and their associated learnt Q values. The higher Q value indicates better cumulative reward that we think a certain response has (based on our MCTS forward simulation in semantic space)
 ```
 conversation starter:  Can you tell me something about Singapore, the place where ICLR 2025 is held?
@@ -42,7 +42,7 @@ Learnt Q value rewards:  [tensor(1.4333), tensor(1.4436), tensor(1.3992), tensor
 
 # Given a conversation starter, perform multi-step evaluation in a real conversation and produce the cumulative rewards.
 0. Certainly, we might want to verify if SCOPE really did choose LLM responses that really lead to higher cumulative rewards in an actual conversation. You can certainly wrap `run_evaluation_singular.py` with an iterative loop to evaluate this. For convenience, we have introduced a wrapper to help evaluate the cumulative rewards actually produced by responses selected by SCOPE in a multi-turn conversation.
-1. Run `python3 -u evaluation/run_evaluation.py --reward_func=length_human --cuda_for_llm_reward=0 --cuda_for_llm_reward=1 --lr=0.0001 --evaluation_depth=4 --mcts_time=2 --agent=random --result_file=output --trials=1 --evaluation_data=camera_ready.txt 2>&1 | tee output.out`
+1. Run `python3 -u evaluation/run_evaluation.py --reward_func=length_human --cuda_for_llm_reward=0 --cuda_for_q_embedding_transition=1 --lr=0.0001 --evaluation_depth=4 --mcts_time=2 --agent=random --result_file=output --trials=1 --evaluation_data=camera_ready.txt 2>&1 | tee output.out`
 2. We can observe the cumulative rewards and the actual conversation generated from our LLM responses.
 ```
 all rewards from trials:  [1.1600000000000001]
@@ -60,8 +60,28 @@ Human   : ""That's a great point! Have you ever attended a conference where the 
 LLM     : "Actually, I attended a conference in Tokyo once, and the location was a historic temple that was converted into a conference center. It was really unique and added to the overall experience of the conference."
 Human   : ""That sounds amazing! What was it like to have a conference in such a historic setting? Did it add any challenges or benefits to the event?""
 LLM     : "It was fascinating! The temple's architecture and atmosphere added a sense of serenity and tranquility to the conference, which was a nice contrast to the usual conference settings. However, it did present some logistical challenges, such as limited amenities and restricted access to certain areas."
-Human   : ""Wow, that sounds like an incredible experience! Did you get a chance to explore the temple grounds and learn more about its history during your stay?""]
 ```
+# Parameter information
+Here, we highlight the important parameters that you can adjust.
+`python3 -u evaluation/run_evaluation.py --reward_func=length_human --cuda_for_llm_reward=0 --cuda_for_q_embedding_transition=1 --lr=0.0001 --evaluation_depth=4 --mcts_time=5 --agent=pure_online --result_file=output --trials=1 --evaluation_data=conversation_starter.txt`
+- **reward_func**
+  - `length_human`: Maximize the cumulative token length in the human replies (which we have no direct control of; we can only use the LLM response to implicitly control the length of human replies) in a conversation.
+  - `length_both`: Maximize the cumulative token length of entire conversation (including the LLM response). This is easier that `length_human` because we actually have direct control of length of LLM response.
+  - `harmful`: Maximizes the harmlessness of the entire conversation (where harmlessness = negative of safety score given by `Meta-Llama-Guard-2-8B`)
+- **agent**
+    - `random`: Choose a random response
+    - `pure_online`: Use vanilla MCTS to search for the next best response out of the proposed LLM candidates. (Yu et al., 2023; Koh et al., 2024)
+    - `semantic_online`: Our method, which uses SCOPE to perform MCTS in semantic space. We use the transition and reward model learnt from the first learning phase.
+- **cuda_for_llm_reward** and **cuda_for_q_embedding_transition** specifies which CUDA device to use. In general, setting them to the same device is fine, but you might encounter OOM issues if the conversation has many tokens. Using two GPUs is safer (especially when you run `run_evaluation.py`, which loads two LLMs, one to generate responses, and another for evaluation; so we load both onto different devices).
+- **lr**: learning rate of the Q function used in SCOPE.
+- **evaluation_depth**: This is only applicable for `run_evaluation.py` and indicates the number of evaluation steps for the entire conversation. For example, `--evaluation_depth=4` means we ask the LLM for responses 4 times (resulting in a conversation where the LLM and human each speaks for 4 times).
+- **mcts_time**: time to run MCTS for. For SCOPE, we use around 3-10 seconds. Increasing this number allows us to plan more, but takes longer.
+- **result_file**: the output file name which we print the results to.
+
+# Define your own reward function
+- We might be interested in adding new reward functions. Currently, reward functions are defined in e.g., `reward/Embedding_Length_Reward.py` and `reward\Llama_2_Guard_Reward.py`. Notice that both classes contain the function
+`def get_reward(self, prev_state : Conversation | tuple, action : str | tuple, human_response : str | tuple | None) -> float:`. This functions tells us, given a previous conversation state, a specific action (LLM response) and a transition to the next human response, what is the associated rewards? This also corresponds to the instantaneous reward at one transition step in the MDP. A new reward class needs to have this function. Furthermore, this new reward class needs to calculate the reward associated with each point in semantic space (needs to be learnt) to perform planning with SCOPE and the reward associated with real conversation text, for evaluation purposes.
+- To train a new reward model that knows the instantaneous reward associated with each point in semantic space, you can take any text data, find its ground-truth reward label and project the text into embedding space with `Meta-Llama-Guard-2-8B` (we use this as our embedding model in our paper). Hence, your reward model needs to learn the mapping between the embedding and the reward label (e.g., using a neural network). This can be learnt offline and loaded during planning. A good example to start is to look at `reward/Embedding_Length_Reward.py`, which loads a `embedding_length_reward` torch neural network model that predicts the reward associated with an embedding tuple.
 
 
 
