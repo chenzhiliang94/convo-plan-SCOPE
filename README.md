@@ -26,6 +26,7 @@ SCOPE consists of two phase. The learning phase has already been done and we hav
 
 # Given a conversation starter, get the best LLM response.
 A simple use case is that given a conversation starter, we want to use SCOPE to simply
+
 0. Go to `evaluation/conversation_starter.txt`, you should place one question that you want to ask the LLM with here. (Currently, we do not support multiple questions for this section, but later sections do).
 1. Run `python3 -u evaluation/run_evaluation_singular.py --reward_func=length_human --cuda_for_llm_reward=0 --cuda_for_q_embedding_transition=1 --lr=0.0001 --evaluation_depth=4 --mcts_time=5 --agent=pure_online --result_file=camera --trials=1 --evaluation_data=conversation_starter.txt 2>&1 | tee output.out` The reward function and parameters can be adjusted. We provide more details what they mean later.
 2. You should see the following output. We see the LLM response options (we can adjust the number of proposed responses, see later sections), and their associated learnt Q values. The higher Q value indicates better cumulative reward that we think a certain response has (based on our MCTS forward simulation in semantic space)
