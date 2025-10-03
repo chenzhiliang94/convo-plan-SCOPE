@@ -22,7 +22,7 @@ SCOPE consists of two phase. The learning phase has already been done and we hav
 # SETUP (DO THIS BEFORE ANYTHING ELSE)
 0. Install pytorch `pip3 install torch`
 1. `pip3 install -r requirements.txt`
-2. Download files with `gdown --folder "1lsBcfeiUboS_Qasd9o3BrMCGV2qYDFJ-" -O transition_models/deterministic`
+2. Download files with the following command: `gdown --folder "1NLK8f8aV476frtIuMwC8IgwTVPxbOB6S" -O transition_models/deterministic`
 
 # Given a conversation starter, get the best LLM response.
 A simple use case is that given a conversation starter, we want to use SCOPE to simply
@@ -85,5 +85,5 @@ Here, we highlight the important parameters that you can adjust.
 - To train a new reward model that knows the instantaneous reward associated with each point in semantic space, you can take any text data, find its ground-truth reward label and project the text into embedding space with `Meta-Llama-Guard-2-8B` (we use this as our embedding model in our paper). Hence, your reward model needs to learn the mapping between the embedding and the reward label (e.g., using a neural network). This can be learnt offline and loaded during planning. A good example to start is to look at `reward/Embedding_Length_Reward.py`, which loads a `embedding_length_reward` torch neural network model that predicts the reward associated with an embedding tuple.
 
 # Training your own transition models
-1. Pre-process your dataset by converting the conversations into the embedding vectors using the embedding model with `python3 train\embed_dataset.py`.
+1. Pre-process your dataset by converting the conversations into the embedding vectors using the embedding model with `python3 train/embed_dataset.py`.
 2. Train the transition models with `python3 train/train_transition.py --seed=0` for seeds ${0,1,2,3}$.
