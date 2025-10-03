@@ -84,5 +84,6 @@ Here, we highlight the important parameters that you can adjust.
 `def get_reward(self, prev_state : Conversation | tuple, action : str | tuple, human_response : str | tuple | None) -> float:`. This functions tells us, given a previous conversation state, a specific action (LLM response) and a transition to the next human response, what is the associated rewards? This also corresponds to the instantaneous reward at one transition step in the MDP. A new reward class needs to have this function. Furthermore, this new reward class needs to calculate the reward associated with each point in semantic space (needs to be learnt) to perform planning with SCOPE and the reward associated with real conversation text, for evaluation purposes.
 - To train a new reward model that knows the instantaneous reward associated with each point in semantic space, you can take any text data, find its ground-truth reward label and project the text into embedding space with `Meta-Llama-Guard-2-8B` (we use this as our embedding model in our paper). Hence, your reward model needs to learn the mapping between the embedding and the reward label (e.g., using a neural network). This can be learnt offline and loaded during planning. A good example to start is to look at `reward/Embedding_Length_Reward.py`, which loads a `embedding_length_reward` torch neural network model that predicts the reward associated with an embedding tuple.
 
-
-
+# Training your own transition models
+1. Pre-process your dataset by converting the conversations into the embedding vectors using the embedding model with `python3 train\embed_dataset.py`.
+2. Train the transition models with `python3 train/train_transition.py --seed=0` for seeds ${0,1,2,3}$.
