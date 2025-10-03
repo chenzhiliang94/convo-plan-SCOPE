@@ -14,3 +14,4 @@ flash_attn
 lz4
 token_count
 scipy
+gdown
