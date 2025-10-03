@@ -1,10 +1,7 @@
 numpy
 matplotlib
 torch
-scikit-learn
-botorch
 pandas
-graphviz
 tiktoken
 transformers
 datasets
@@ -16,3 +13,4 @@ bitsandbytes
 flash_attn
 lz4
 token_count
+scipy
