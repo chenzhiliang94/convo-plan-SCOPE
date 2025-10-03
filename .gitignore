@@ -1,0 +1,6 @@
+*.pyc
+**/__pycache__/
+
+transition_models/**/*.pth
+
+*.out
